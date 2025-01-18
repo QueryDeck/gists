@@ -12,11 +12,12 @@ SELECT n.nspname,
         ELSE 'f'
     END AS primarykey,
     CASE
-        WHEN p.contype = 'u' THEN 't'
+        WHEN p.contype = 'u' OR (idx.indisunique AND idx.indrelid IS NOT NULL) THEN 't'
         ELSE 'f'
     END AS uniquekey,
     CASE
         WHEN p.contype = 'u' THEN p.conname
+        WHEN idx.indisunique THEN ci.relname
     END AS uindex,
     CASE
         WHEN p.contype = 'f' THEN g.relname
@@ -50,6 +51,9 @@ LEFT JOIN pg_constraint p ON p.conrelid = c.oid
 AND f.attnum = ANY (p.conkey)
 LEFT JOIN pg_class AS g ON p.confrelid = g.oid
 LEFT JOIN pg_namespace AS nn ON g.relnamespace = nn.oid
+LEFT JOIN pg_index idx ON idx.indrelid = c.oid 
+    AND f.attnum = ANY(idx.indkey)
+LEFT JOIN pg_class ci ON ci.oid = idx.indexrelid
 
 WHERE c.relkind = 'r'::char
 AND f.attnum > 0
